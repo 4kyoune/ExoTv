@@ -284,109 +284,74 @@ const DetailsPage: NextPage<DetailsPageProps> = ({ anime }) => {
             <InfoItem
               title="Synonyms"
               value={anime.synonyms.map((synomym) => (
-                <p key={synomym}>{synomym}</p>
-              ))}
-            />
-          </div>
 
-          <div className="space-y-2 text-gray-400">
-            <h1 className="font-semibold">Tags</h1>
+                                slug={epsData.id}
+                            />
+                            <div className="my-3 p-2 text-sm md:text-base border-kumanime border font-poppins">
+                                <div className="flex gap-2 font-semibold items-center justify-center ">
+                                    <p>Kualitas : </p>
+                                    <button className={streamQuality === 'sd' ? `py-1 px-2 rounded-sm bg-kumanime` : `py-1 px-2 rounded-sm`} onClick={() => setStreamQuality('sd')}>SD 480p</button>
+                                    <button className={streamQuality === 'hd' ? `py-1 px-2 rounded-sm bg-kumanime` : `py-1 px-2 rounded-sm`} onClick={() => setStreamQuality('hd')}>HD 720p</button>
+                                </div>
+                                <p className="text-center text-[11px] mt-2">*Kualitas HD tidak selalu ada karena limitasi akses ke server sumber</p>
+                            </div>
+                            <DetailCard
+                                title={animeData.title}
+                                poster={animeData?.thumb}
+                                synopsis={animeData?.synopsis}
+                                slug={animeData.anime_id}
+                            />
+                        </div>
+                        <div className="my-6">
+                            <Title>Rekomendasi Anime</Title>
+                            <Slider>
+                                {
+                                    ongoingAnime.animeList.map((data, index) => {
+                                        return(
+                                            <div className="swiper-slide" key={index}>
+                                                <Card
+                                                    key={index}
+                                                    imgUrl={data.thumb}
+                                                    href={`/anime/${data.id}`}
+                                                    title={data.title}
+                                                    episode={data.episode}
+                                                    rating="Baru"
+                                                />
+                                            </div>
+                                        )
+                                    })
+                                }
+                            </Slider>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-3 mt-0 lg:mt-16 px-3">
+                        <Title>Berita</Title>
+                        <div className="bg-bg-kumanime-semi">
+                            <Aside>
+                                {
+                                    newsAnimeData ? (newsAnimeData.slice(0, 5).map((data, index) => {
+                                        return (
+                                            <AsideCard
+                                                key={index}
+                                                imgUrl={data.thumbnail}
+                                                title={data.title}
+                                                href={data.url}
+                                                topics={data.topics}
+                                                uploaded={data.uploadedAt}
+                                            />
+                                        )
+                                    })) : <p>Loading...</p>
+                                }
+                            </Aside>
+                        </div>
+                    </div>
+                </div>
+                </>
+            ) : (
+                <Loading />
+            )}
+        </>
+    );
+}
 
-            <ul className="overflow-x-auto flex flex-row md:flex-col gap-2 [&>*]:shrink-0 md:no-scrollbar">
-              {anime.tags.map((tag) => (
-                (<Link
-                  href={{
-                    pathname: "/browse",
-                    query: { type: "anime", tags: tag.name },
-                  }}
-                  key={tag.id}
-                  className="md:block">
-
-                  <li className="p-2 rounded-md bg-background-900 hover:text-primary-300 transition duration-300">
-                    {tag.name}
-                  </li>
-
-                </Link>)
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="space-y-12 md:col-span-8">
-
-          {!!anime?.characters?.edges?.length && (
-            <DetailsSection
-              title="Character Section"
-              className="grid w-full grid-cols-1 gap-4 md:grid-cols-2"
-            >
-              {anime.characters.edges.map((characterEdge, index) => (
-                <CharacterConnectionCard
-                  characterEdge={characterEdge}
-                  key={index}
-                />
-              ))}
-            </DetailsSection>
-          )}
-
-          {!!anime?.relations?.nodes?.length && (
-            <DetailsSection title="Relations Section">
-              <List data={anime.relations.nodes}>
-                {(node) => <Card data={node} />}
-              </List>
-            </DetailsSection>
-          )}
-
-          {!!anime?.recommendations?.nodes?.length && (
-            <DetailsSection title="Recommendation">
-              <List
-                data={anime.recommendations.nodes.map(
-                  (node) => node.mediaRecommendation
-                )}
-              >
-                {(node) => <Card data={node} />}
-              </List>
-            </DetailsSection>
-          )}
-        </div>
-      </Section>
-    </div>
-  </>;
-};
-
-export const getStaticProps: GetStaticProps = async ({
-  params: { params },
-}) => {
-  try {
-    const media = await getMediaDetails({
-      type: MediaType.Anime,
-      id: Number(params[0]),
-    });
-
-    return {
-      props: {
-        anime: media as Media,
-      },
-      revalidate: REVALIDATE_TIME,
-    };
-  } catch (err) {
-    return { notFound: true, revalidate: REVALIDATE_TIME };
-  }
-};
-
-export const getStaticPaths: GetStaticPaths = async () => {
-  return { paths: [], fallback: "blocking" };
-};
-
-export default withRedirect(DetailsPage, (router, props) => {
-  const { params } = router.query;
-  const [id, slug] = params as string[];
-  const title = getTitle(props.anime, router.locale);
-
-  if (slug) return null;
-
-  return {
-    url: `/anime/details/${id}/${title}`,
-    options: {
-      shallow: true,
-    },
-  };
-});
+export default Watch
