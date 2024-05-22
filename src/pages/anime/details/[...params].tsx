@@ -33,170 +33,360 @@ import { useEffect, useMemo } from "react";
 import { isMobile } from "react-device-detect";
 import { BsFillPlayFill } from "react-icons/bs";
 
-type Props = {
-    params: {
-        streamid: string;
-        animeid: number;
-    };
-};
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    try {
-        const anime = await getAnimeDetails(params.animeid);
-        if (anime) {
-            const description = anime.description;
-            const formattedDescription = description?.replace(/<\/?[^>]+(>|$)/g, "");
-            return {
-                title: `${`Watching ${params.streamid} on AnimeTrix` || "Opps!! No Title Found"} On AnimeTrix Watch Or Download For Free`,
-                description: formattedDescription || "Opps!! No Description Found",
-                openGraph: {
-                    images: anime?.cover || "https://cdn.discordapp.com/attachments/1079039236302446705/1166676085883285544/animetrixbanner.jpg?ex=654b5ac6&is=6538e5c6&hm=6d9c8c991b0897a33364a58aeea177e53c26216c617b6dff9b5de7607b9bf332&",
-                },
-            };
-        } else {
-            throw new Error("Anime details are missing or incomplete");
-        }
-    } catch (error) {
-        console.error("Error fetching anime details:", error);
-        return {
-            title: "Error",
-            description: "Oops! An error occurred while fetching anime details.",
-            openGraph: {
-                images: "https://images.unsplash.com/photo-1455849318743-b2233052fcff?q=80&w=1769&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-            },
-        };
-    }
+interface DetailsPageProps {
+  anime: Media;
 }
-const Page = async ({
-    params,
-}: {
-    params: {
-        streamid: string;
-        animeid: number;
-    };
-}) => {
-    const details = await getAnimeDetails(params.animeid);
-    const stream = await getSteamingLink(params.streamid);
-    const download = await getDownloadLink(params.streamid);
-    const getAbbreviatedMonth = (month: number): string => {
-        const abbreviatedMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return abbreviatedMonths[month];
-    };
-    // Get the next airing date for the anime.
-    const airingDate = new Date(details.nextAiringEpisode?.airingTime * 1000);
 
-    // Extract the day, month, and year from the airing date.
-    const day = airingDate.getDate();
-    const month = getAbbreviatedMonth(airingDate.getMonth());
-    const year = airingDate.getFullYear();
-    const currentYear = new Date().getFullYear();
+const DetailsPage: NextPage<DetailsPageProps> = ({ anime }) => {
+  const user = useUser();
+  const { locale } = useRouter();
+  
 
-    // Format the time string using the 12-hour clock format.
-    const options: Intl.DateTimeFormatOptions = {
-        hour: "numeric",
-        minute: "numeric",
-        hour12: true,
-    };
-    const timeString = airingDate.toLocaleString(undefined, options);
 
-    // Format the airing date string based on the year.
-    let formattedAiringDate;
-    if (year === currentYear) {
-        formattedAiringDate = `${day} ${month} at ${timeString}`;
-    } else {
-        formattedAiringDate = `${day} ${month} ${year} at ${timeString}`;
-    }
-    return (
-        <>
-            {Object.keys(details || stream).length > 0 ? (
-                <section className="p-2 min-h-screen">
-                    <Suspense fallback={<></>}>
-                        <AddToHistory streamId={params.streamid} animeId={params.animeid} title={stream?.info?.title || "unknown"} episode={stream?.info?.episode || "unknown"} coverImage={details?.cover || "unknown"} image={details?.image || "Unknown"} />
-                    </Suspense>
-                    <div className=" w-full">
-                        <div className=" flex justify-between lg:flex-row flex-col gap-5">
-                            <div className="flex flex-col w-full 2xl:w-[70vw]">
-                                <iframe src={stream?.plyr?.main || stream?.plyr?.backup} scrolling="no" frameBorder="0" allowFullScreen={true} title={params.streamid} allow="picture-in-picture" className="w-full rounded-lg h-[30vh] lg:h-[50vh] md:h-[30vh]"></iframe>
-                                <div className="mt-2">
-                                    <h1 className="font-semibold text-2xl lg:text-4xl text-white">{stream?.info?.title || "unknown"}</h1>
-                                    <span className="text-lg mt-4 lg:text-2xl font-semibold text-white/70">Episode : {stream?.info?.episode || "unknown"}</span>
-                                </div>
+  const nextAiringSchedule = useMemo(
+    () =>
+      anime?.airingSchedule?.nodes
+        ?.sort((a, b) => a.episode - b.episode)
+        .find((schedule) => dayjs.unix(schedule.airingAt).isAfter(dayjs())),
+    [anime?.airingSchedule]
+  );
 
-                                <div className="flex gap-3 mt-6 flex-wrap items-center">
-                                    <a href={download?.download || "https://www.youtube.com/watch?v=dQw4w9WgXcQ"} target="_blank" className=" bg-white  p-2 rounded-lg font-semibold text-black  flex items-center gap-3" rel="noopener noreferrer">
-                                        <Download />
-                                        Download
-                                    </a>
-                                    <Share title={params.streamid} />
-                                    <a href="https://github.com/ShivaBhattacharjee/AnimeTrix-next/issues" target="_blank" className=" bg-white  p-2 rounded-lg font-semibold text-black  flex gap-3 items-center">
-                                        <Flag />
-                                        Report
-                                    </a>
-                                </div>
-                                {details.nextAiringEpisode !== undefined && <NextAiringEpisode nextAiringEpisode={details?.nextAiringEpisode?.episode} formattedAiringDate={formattedAiringDate} />}
+  const nextAiringScheduleTime = useMemo(() => {
+    if (!nextAiringSchedule?.airingAt) return null;
 
-                                <div className="flex gap-3 w-full mt-5">
-                                    <img src={details?.image} alt={`an image of ${params?.streamid}`} className=" w-40 md:w-44 rounded-lg" />
-                                    <div className="flex flex-wrap w-full gap-3 text-md md:text-lg flex-col font-semibold">
-                                        <h1>
-                                            <span className="text-white/70 ">Status</span> : {details?.status || "Undefined"}
-                                        </h1>
-                                        <h1>
-                                            <span className=" text-white/70 ">Season</span> : {details?.season || "Unknown"}
-                                        </h1>
-                                        <h1>
-                                            <span className=" text-white/70 ">Audio</span> : {details?.subOrDub || "Unknown"}
-                                        </h1>
-                                        <h1>
-                                            <span className=" text-white/70">Type</span> : {details?.type || "Unknown"}
-                                        </h1>
-                                        <h1>
-                                            <span className=" text-white/70">Country</span> : {details?.countryOfOrigin || "Earth"}
-                                        </h1>
-                                    </div>
-                                    <AddToBookmark image={details?.image} animeId={params.animeid} title={stream?.info?.title || "unknown"} isStream={true} />
-                                </div>
+    return dayjs.unix(nextAiringSchedule.airingAt).locale(locale).fromNow();
+  }, [nextAiringSchedule?.airingAt, locale]);
 
-                                <div className="flex flex-wrap gap-4 mt-5 text-lg font-semibold">
-                                    {details?.genres &&
-                                        Object?.keys(details?.genres).length > 0 &&
-                                        details.genres.map((genre: string, index: number) => (
-                                            <Link href={`/genres/${genre}`} className="border-2 text-sm lg:text-lg border-white  border-dotted rounded-lg p-2 duration-200 hover:border-solid" key={index}>
-                                                {genre}
-                                            </Link>
-                                        ))}
-                                </div>
-                            </div>
-                            <div className="mt-3">
-                                <Suspense fallback={<EpisodeLoading />}>
-                                    <EpisodeLists currentlyPlaying={stream?.info?.episode} animeId={params.animeid} isStream={true} />
-                                </Suspense>
-                            </div>
-                        </div>
-                    </div>
-                    <Suspense>
-                        <CommentSection streamId={params.streamid} />
-                    </Suspense>
-                    <div className="mt-7 flex flex-col gap-5">
-                        <Suspense fallback={<RelationLoading />}>
-                            <RelationCard id={params.animeid} />
-                        </Suspense>
-                    </div>
-                    <div className="mt-6">
-                        <Suspense fallback={<CharactersLoading />}>
-                            <CharacterCard characters={details.characters} />
-                        </Suspense>
-                    </div>
-                    <div className="mt-12">
-                        <Suspense fallback={<RecommendedLoading />}>
-                            <RecommendedAnime episode={params.animeid} />
-                        </Suspense>
-                    </div>
-                </section>
-            ) : (
-                <ServerError />
+  const title = useMemo(() => getTitle(anime, locale), [anime, locale]);
+  const description = useMemo(
+    () => getDescription(anime, locale),
+    [anime, locale]
+  );
+
+  useEffect(() => {
+    if (!anime) return;
+
+    const syncDataScript = document.querySelector("#syncData");
+
+    syncDataScript.textContent = JSON.stringify({
+      title: anime.title.userPreferred,
+      aniId: Number(anime.id),
+      episode: null,
+      id: anime.id,
+      nextEpUrl: null,
+    });
+  }, [anime]);
+
+  return <>
+    <Head
+      title={`${title} - Exoexs`}
+      description={description}
+      image={anime.bannerImage}
+    />
+
+    <div className="pb-8">
+      <DetailsBanner image={anime.bannerImage} />
+
+      <Section className="relative pb-4 bg-background-900">
+        <div className="flex flex-row md:space-x-8">
+          <div className="shrink-0 relative md:static md:left-0 md:-translate-x-0 w-[120px] md:w-[186px] -mt-20 space-y-6">
+            <PlainCard src={anime.coverImage.extraLarge} alt={title} />
+
+            {user && !isMobile && (
+              <div className="hidden md:flex items-center space-x-1">
+                <SourceStatus type={MediaType.Anime} source={anime} />
+                <NotificationButton type={MediaType.Anime} source={anime} />
+              </div>
             )}
-        </>
-    );
+          </div>
+
+          <div className="flex flex-col justify-between md:py-4 ml-4 text-left items-start md:-mt-16 space-y-4">
+            <div className="flex flex-col items-start space-y-4 md:no-scrollbar">
+              <div className="hidden md:flex items-center flex-wrap gap-2 mb-4">
+                
+              </div>
+
+              <p className="mb-2 text-2xl md:text-3xl font-semibold">
+                {title}
+              </p>
+
+              <DotList>
+                {anime.genres.map((genre) => (
+                  <span key={genre}>
+                    {convert(genre, "genre", { locale })}
+                  </span>
+                ))}
+              </DotList>
+
+              <MediaDescription
+                description={description}
+                containerClassName="mt-4 mb-8 md:block"
+                className="text-gray-300 hover:text-gray-100 transition duration-300"
+              />
+
+              {/* MAL-Sync UI */}
+              <div id="mal-sync" className="hidden md:block"></div>
+            </div>
+
+            <div className="hidden md:flex gap-x-8 overflow-x-auto md:gap-x-16 [&>*]:shrink-0">
+              <InfoItem
+                title="Country"
+                value={convert(anime.countryOfOrigin, "country", { locale })}
+              />
+              <InfoItem
+                title="Total Episodes"
+                value={anime.episodes}
+              />
+
+              {anime.duration && (
+                <InfoItem
+                  title="Duration"
+                  value={`${anime.duration} ${"Minutes"}`}
+                />
+              )}
+
+              <InfoItem
+                title="Status"
+                value={convert(anime.status, "status", { locale })}
+              />
+              <InfoItem
+                title="Age Rated"
+                value={anime.isAdult ? "18+" : ""}
+              />
+
+              {nextAiringSchedule && (
+                <InfoItem
+                  className="!text-primary-300"
+                  title="Next Airing Schedule"
+                  value={`${"Episode"} ${
+                    nextAiringSchedule.episode
+                  }: ${nextAiringScheduleTime}`}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <MediaDescription
+          description={description}
+          containerClassName="my-4 block md:hidden"
+          className="text-gray-300 hover:text-gray-100 transition duration-300"
+        />
+
+        <div className="flex md:hidden items-center space-x-2 mb-4">
+          {user && isMobile && (
+            <SourceStatus type={MediaType.Anime} source={anime} />
+          )}
+
+          <Link
+            href={`/anime/watch/${anime.id}`}
+            className={classNames(!user && "flex-1")}>
+
+            {user ? (
+              <CircleButton secondary LeftIcon={BsFillPlayFill} />
+            ) : (
+              <Button
+                primary
+                LeftIcon={BsFillPlayFill}
+                className="relative w-full"
+              >
+                <p className="!mx-0 absolute left-1/2 -translate-x-1/2">
+                  Watch Now
+                </p>
+              </Button>
+            )}
+
+          </Link>
+        </div>
+
+        <div className="md:hidden flex gap-x-8 overflow-x-auto md:gap-x-16 [&>*]:shrink-0">
+          <InfoItem
+            title="Country"
+            value={convert(anime.countryOfOrigin, "country", { locale })}
+          />
+          <InfoItem
+            title="Total Episodes"
+            value={anime.episodes}
+          />
+
+          {anime.duration && (
+            <InfoItem
+              title="Duration"
+              value={`${anime.duration} ${"Minutes"}`}
+            />
+          )}
+
+          <InfoItem
+            title="Status"
+            value={convert(anime.status, "status", { locale })}
+          />
+          <InfoItem
+            title="Age Rated"
+            value={anime.isAdult ? "18+" : ""}
+          />
+
+          {nextAiringSchedule && (
+            <InfoItem
+              className="!text-primary-300"
+              title="Next Airing Schedule"
+              value={`${"Episode"} ${
+                nextAiringSchedule.episode
+              }: ${nextAiringScheduleTime}`}
+            />
+          )}
+        </div>
+      </Section>
+
+      <Section className="w-full min-h-screen gap-8 mt-2 md:mt-8 space-y-8 md:space-y-0 md:grid md:grid-cols-10 sm:px-12 md:no-scrollbar">
+        <div className="md:col-span-2 xl:h-[max-content] space-y-4 md:no-scrollbar">
+          <div className="flex flex-row md:flex-col overflow-x-auto bg-background-900 rounded-md md:p-4 gap-4 [&>*]:shrink-0 md:no-scrollbar">
+            <InfoItem
+              title="Format"
+              value={convert(anime.format, "format", { locale })}
+            />
+            <InfoItem title="English" value={anime.title.english} />
+            <InfoItem title="Native" value={anime.title.native} />
+            <InfoItem title="Romanji" value={anime.title.romaji} />
+            <InfoItem
+              title="Popular"
+              value={numberWithCommas(anime.popularity)}
+            />
+            <InfoItem
+              title="Favourite"
+              value={numberWithCommas(anime.favourites)}
+            />
+            <InfoItem
+              title="Trending"
+              value={numberWithCommas(anime.trending)}
+            />
+
+            <InfoItem
+              title="Studio"
+              value={anime.studios.nodes.map((studio) => (
+                <p key={studio.id}>
+                  <Link
+                    href={createStudioDetailsUrl(studio)}
+                    className="hover:text-primary-300 transition duration-300">
+
+                    {studio.name}
+
+                  </Link>
+                </p>
+              ))}
+            />
+
+            <InfoItem
+              title="Season"
+              value={`${convert(anime.season, "season", { locale })} ${
+                anime.seasonYear
+              }`}
+            />
+            <InfoItem
+              title="Synonyms"
+              value={anime.synonyms.map((synomym) => (
+                <p key={synomym}>{synomym}</p>
+              ))}
+            />
+          </div>
+
+          <div className="space-y-2 text-gray-400">
+            <h1 className="font-semibold">Tags</h1>
+
+            <ul className="overflow-x-auto flex flex-row md:flex-col gap-2 [&>*]:shrink-0 md:no-scrollbar">
+              {anime.tags.map((tag) => (
+                (<Link
+                  href={{
+                    pathname: "/browse",
+                    query: { type: "anime", tags: tag.name },
+                  }}
+                  key={tag.id}
+                  className="md:block">
+
+                  <li className="p-2 rounded-md bg-background-900 hover:text-primary-300 transition duration-300">
+                    {tag.name}
+                  </li>
+
+                </Link>)
+              ))}
+            </ul>
+          </div>
+        </div>
+        <div className="space-y-12 md:col-span-8">
+
+          {!!anime?.characters?.edges?.length && (
+            <DetailsSection
+              title="Character Section"
+              className="grid w-full grid-cols-1 gap-4 md:grid-cols-2"
+            >
+              {anime.characters.edges.map((characterEdge, index) => (
+                <CharacterConnectionCard
+                  characterEdge={characterEdge}
+                  key={index}
+                />
+              ))}
+            </DetailsSection>
+          )}
+
+          {!!anime?.relations?.nodes?.length && (
+            <DetailsSection title="Relations Section">
+              <List data={anime.relations.nodes}>
+                {(node) => <Card data={node} />}
+              </List>
+            </DetailsSection>
+          )}
+
+          {!!anime?.recommendations?.nodes?.length && (
+            <DetailsSection title="Recommendation">
+              <List
+                data={anime.recommendations.nodes.map(
+                  (node) => node.mediaRecommendation
+                )}
+              >
+                {(node) => <Card data={node} />}
+              </List>
+            </DetailsSection>
+          )}
+        </div>
+      </Section>
+    </div>
+  </>;
 };
 
-export default Page;
+export const getStaticProps: GetStaticProps = async ({
+  params: { params },
+}) => {
+  try {
+    const media = await getMediaDetails({
+      type: MediaType.Anime,
+      id: Number(params[0]),
+    });
+
+    return {
+      props: {
+        anime: media as Media,
+      },
+      revalidate: REVALIDATE_TIME,
+    };
+  } catch (err) {
+    return { notFound: true, revalidate: REVALIDATE_TIME };
+  }
+};
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  return { paths: [], fallback: "blocking" };
+};
+
+export default withRedirect(DetailsPage, (router, props) => {
+  const { params } = router.query;
+  const [id, slug] = params as string[];
+  const title = getTitle(props.anime, router.locale);
+
+  if (slug) return null;
+
+  return {
+    url: `/anime/details/${id}/${title}`,
+    options: {
+      shallow: true,
+    },
+  };
+});
