@@ -20,322 +20,176 @@ import Overlay from "./Player/Overlay";
 import ProgressSlider from "./Player/ProgressSlider";
 import TimestampSkipButton from "./Player/TimestampSkipButton";
 
-export interface WatchPlayerProps extends PlayerProps {
-  videoRef?: React.ForwardedRef<HTMLVideoElement>;
+const Watch = () => {
+    const {slug} = useParams();
+
+    const [epsData, setEpsData] = useState();
+    const [newsAnimeData, setNewsAnimeData] = useState([]);
+    const [ongoingAnime, setOngoingAnime] = useState([]);
+    const [streamQuality, setStreamQuality] = useState('sd');
+    const [animeData, setAnimeData] = useState();
+
+    useEffect(() => {
+        async function ongoingAnime() {
+            try {
+                const result = await getOngoingAnime(1);
+                setOngoingAnime(result);
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        ongoingAnime()
+    }, [])
+
+    useEffect(() => {
+        async function epsDetails() {
+            try {
+                const result = await getEpisodeDetails(slug);
+                const animeDetailsResult = await getAnimeDetails(result.id);
+                setEpsData(result);
+                setAnimeData(animeDetailsResult);
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        epsDetails()
+    }, [slug])
+
+    useEffect(() => {
+        async function animeNews() {
+            try {
+                const result = await getAnimeNews();
+                setNewsAnimeData(result);
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        animeNews()
+    }, [])
+
+    return (
+        <>
+            {(epsData && animeData && newsAnimeData && ongoingAnime.status === "success") ? (
+                <>
+                <Helmet>
+                    <title>Nonton {epsData.title}</title>
+                    <link rel="shortcut icon" type="image/x-icon" href="logo.png" />
+                    <meta
+                    name="description"
+                    content={`Nonton Anime ${epsData.title} - Kumanime`}
+                    />
+                    <meta name="robots" content="index, follow" />
+                    <meta
+                    property="og:title"
+                    content={`Nonton ${epsData.title} - Kumanime`}
+                    />
+                    <meta
+                    property="og:description"
+                    content={`Nonton Anime ${epsData.title} - Kumanime`}
+                    />
+                    <meta
+                    property="og:image"
+                    content="https://raw.githubusercontent.com/MastayY/kumanime/main/public/logo.png"
+                    />
+                    <meta property="og:locale" content="id_ID" />
+                    <meta property="og:type" content="article" />
+                    <meta property="og:site_name" content="Kumanime.FUN" />
+                    <meta name="twitter:card" content="summary_large_image" />
+                    <meta name="googlebot" content="index, follow" />
+                    <meta name="twitter:title" content={`Nonton ${epsData.title} - Kumanime`} />
+                    <meta name="twitter:card" content="summary_large_image" />
+                    <meta name="keywords" content="kumanime, otakudesu, kuronime, kuramanime, web streaming anime, moenime, moenime id, moenime list, moe anime, anime batch indonesia, anime batch sub indo, animebatch sub indo, anime batch terbaru, download anime batch subtitle indonesia, situs download anime, anime sub indo, download anime sub indo, download anime subtitle indonesia, download anime terbaru, download anime bd, download anime movie, download anime batch, download anime batch sub indo, download anime batch subtitle indonesia terlengkap, streaming anime, streaming anime sub indo, streaming anime subtitle indonesia, streaming anime sub indo lengkap" />
+                    <meta
+                    name="twitter:description"
+                    content="Nonton Anime Online Sub Indo Gratis di KUMANIME.FUN"
+                    />
+                    <meta
+                    name="twitter:image"
+                    content="https://raw.githubusercontent.com/MastayY/kumanime/main/public/logo.png"
+                    />
+                </Helmet>
+                <div className="grid grid-cols-1 lg:grid-cols-10 gap-7 py-7 px-3 md:px-7 bg-bg-kumanime text-white">
+                    <div className="lg:col-span-7">
+                        <div>
+                            <h1 className="font-bold text-xl md:text-3xl py-3 px-3 mb-3">Nonton {epsData.title}</h1>
+                            <IframeVideo 
+                                title={epsData.title}
+                                streamUrl={epsData.stream_link}
+                                quality={streamQuality}
+                            />
+                            <Navigation 
+                                prevSlug={epsData.prev_eps_slug}
+                                nextSlug={epsData.next_eps_slug}
+                                slug={epsData.id}
+                            />
+                            <div className="my-3 p-2 text-sm md:text-base border-kumanime border font-poppins">
+                                <div className="flex gap-2 font-semibold items-center justify-center ">
+                                    <p>Kualitas : </p>
+                                    <button className={streamQuality === 'sd' ? `py-1 px-2 rounded-sm bg-kumanime` : `py-1 px-2 rounded-sm`} onClick={() => setStreamQuality('sd')}>SD 480p</button>
+                                    <button className={streamQuality === 'hd' ? `py-1 px-2 rounded-sm bg-kumanime` : `py-1 px-2 rounded-sm`} onClick={() => setStreamQuality('hd')}>HD 720p</button>
+                                </div>
+                                <p className="text-center text-[11px] mt-2">*Kualitas HD tidak selalu ada karena limitasi akses ke server sumber</p>
+                            </div>
+                            <DetailCard
+                                title={animeData.title}
+                                poster={animeData?.thumb}
+                                synopsis={animeData?.synopsis}
+                                slug={animeData.anime_id}
+                            />
+                        </div>
+                        <div className="my-6">
+                            <Title>Rekomendasi Anime</Title>
+                            <Slider>
+                                {
+                                    ongoingAnime.animeList.map((data, index) => {
+                                        return(
+                                            <div className="swiper-slide" key={index}>
+                                                <Card
+                                                    key={index}
+                                                    imgUrl={data.thumb}
+                                                    href={`/anime/${data.id}`}
+                                                    title={data.title}
+                                                    episode={data.episode}
+                                                    rating="Baru"
+                                                />
+                                            </div>
+                                        )
+                                    })
+                                }
+                            </Slider>
+                        </div>
+                    </div>
+                    <div className="lg:col-span-3 mt-0 lg:mt-16 px-3">
+                        <Title>Berita</Title>
+                        <div className="bg-bg-kumanime-semi">
+                            <Aside>
+                                {
+                                    newsAnimeData ? (newsAnimeData.slice(0, 5).map((data, index) => {
+                                        return (
+                                            <AsideCard
+                                                key={index}
+                                                imgUrl={data.thumbnail}
+                                                title={data.title}
+                                                href={data.url}
+                                                topics={data.topics}
+                                                uploaded={data.uploadedAt}
+                                            />
+                                        )
+                                    })) : <p>Loading...</p>
+                                }
+                            </Aside>
+                        </div>
+                    </div>
+                </div>
+                </>
+            ) : (
+                <Loading />
+            )}
+        </>
+    );
 }
 
-const PlayerControls = React.memo(() => {
-  const {
-    playerProps: {
-      setEpisode,
-      episodes,
-      currentEpisodeIndex,
-      sourceId,
-      anime,
-      currentEpisode,
-    },
-    isBackground,
-  } = useGlobalPlayer();
-  const { isInteracting } = useInteract();
-
-  const sourceEpisodes = useMemo(
-    () => episodes.filter((episode) => episode.sourceId === sourceId),
-    [episodes, sourceId]
-  );
-
-  const nextEpisode = useMemo(
-    () => sourceEpisodes[currentEpisodeIndex + 1],
-    [currentEpisodeIndex, sourceEpisodes]
-  );
-
-  return !isBackground ? (
-    <Controls
-      rightControlsSlot={
-        <React.Fragment>
-          {currentEpisodeIndex < sourceEpisodes.length - 1 && (
-            <NextEpisodeButton onClick={() => setEpisode(nextEpisode)} />
-          )}
-
-          {anime?.id && (
-            <EpisodesButton>
-              <div className="w-[70vw] overflow-hidden bg-background-900 p-4">
-                <LocaleEpisodeSelector
-                  mediaId={anime.id}
-                  episodes={episodes}
-                  activeEpisode={currentEpisode}
-                  episodeLinkProps={{ shallow: true, replace: true }}
-                />
-              </div>
-            </EpisodesButton>
-          )}
-        </React.Fragment>
-      }
-    />
-  ) : (
-    <div className="space-y-2">
-      {isInteracting && (
-        <div className="px-4">
-          <TimeIndicator />
-        </div>
-      )}
-
-      <ProgressSlider />
-    </div>
-  );
-});
-
-PlayerControls.displayName = "PlayerControls";
-
-const PlayerMobileControls = React.memo(() => {
-  const {
-    playerProps: {
-      setEpisode,
-      episodes,
-      currentEpisodeIndex,
-      sourceId,
-      anime,
-      currentEpisode,
-    },
-    isBackground,
-  } = useGlobalPlayer();
-
-  const sourceEpisodes = useMemo(
-    () => episodes.filter((episode) => episode.sourceId === sourceId),
-    [episodes, sourceId]
-  );
-
-  const nextEpisode = useMemo(
-    () => sourceEpisodes[currentEpisodeIndex + 1],
-    [currentEpisodeIndex, sourceEpisodes]
-  );
-
-  return !isBackground ? (
-    <MobileControls
-      controlsSlot={
-        <React.Fragment>
-          <MobileEpisodesButton>
-            {(isOpen, setIsOpen) =>
-              isOpen && (
-                <div
-                  className={classNames(
-                    "fixed inset-0 z-[9999] flex w-full flex-col justify-center bg-background px-2"
-                  )}
-                >
-                  <BsArrowLeft
-                    className="absolute left-3 top-3 h-8 w-8 cursor-pointer transition duration-300 hover:text-gray-200"
-                    onClick={() => setIsOpen(false)}
-                  />
-
-                  {anime?.id && (
-                    <div>
-                      <LocaleEpisodeSelector
-                        mediaId={anime.id}
-                        episodes={episodes}
-                        activeEpisode={currentEpisode}
-                        episodeLinkProps={{ shallow: true, replace: true }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )
-            }
-          </MobileEpisodesButton>
-
-          {currentEpisodeIndex < sourceEpisodes.length - 1 && (
-            <MobileNextEpisode onClick={() => setEpisode(nextEpisode)} />
-          )}
-        </React.Fragment>
-      }
-    />
-  ) : null;
-});
-
-PlayerMobileControls.displayName = "PlayerMobileControls";
-
-const PlayerOverlay = React.memo(() => {
-  const router = useRouter();
-  const { isInteracting } = useInteract();
-  const {
-    playerProps: { currentEpisode, anime },
-    setPlayerState,
-  } = useGlobalPlayer();
-  const { isBackground } = useGlobalPlayer();
-
-  return (
-    <Overlay>
-      {isBackground ? (
-        <MobileOverlay>
-          <div className="flex items-center gap-2 absolute top-4 left-4">
-            <div className="w-8 h-8">
-              <ControlButton
-                className={classNames(
-                  isInteracting ? "visible opacity-100" : "invisible opacity-0"
-                )}
-                onClick={() =>
-                  router.push(
-                    `/anime/watch/${anime?.id}/${currentEpisode?.sourceId}/${currentEpisode.sourceEpisodeId}`
-                  )
-                }
-                tooltip="Expand"
-              >
-                <AiOutlineExpandAlt />
-              </ControlButton>
-            </div>
-            <div className="w-8 h-8">
-              <ControlButton
-                className={classNames(
-                  isInteracting ? "visible opacity-100" : "invisible opacity-0"
-                )}
-                onClick={() => setPlayerState(null)}
-                tooltip="Exit"
-              >
-                <AiOutlineClose />
-              </ControlButton>
-            </div>
-          </div>
-        </MobileOverlay>
-      ) : (
-        <React.Fragment>
-          <BsArrowLeft
-            className={classNames(
-              "transition-al absolute top-10 left-10 h-10 w-10 cursor-pointer duration-300 hover:text-gray-200",
-              isInteracting ? "visible opacity-100" : "invisible opacity-0"
-            )}
-            onClick={router.back}
-          />
-
-          {anime?.idMal && (
-            <TimestampSkipButton
-              className="absolute right-4 bottom-20"
-              episode={parseNumberFromString(currentEpisode.name)}
-              malId={anime.idMal}
-            />
-          )}
-        </React.Fragment>
-      )}
-    </Overlay>
-  );
-});
-
-PlayerOverlay.displayName = "PlayerOverlay";
-
-const PlayerMobileOverlay = React.memo(() => {
-  const router = useRouter();
-  const { isInteracting } = useInteract();
-  const {
-    playerProps: { currentEpisode, anime },
-    isBackground,
-    setPlayerState,
-  } = useGlobalPlayer();
-
-  return (
-    <React.Fragment>
-      <MobileOverlay>
-        {!isBackground && (
-          <BsArrowLeft
-            className={classNames(
-              "absolute top-4 left-4 h-8 w-8 cursor-pointer transition-all duration-300 hover:text-gray-200",
-              isInteracting ? "visible opacity-100" : "invisible opacity-0"
-            )}
-            onClick={router.back}
-          />
-        )}
-
-        {isBackground && (
-          <div className="flex items-center gap-2 absolute top-4 left-4">
-            <div className="w-8 h-8">
-              <ControlButton
-                className={classNames(
-                  isInteracting ? "visible opacity-100" : "invisible opacity-0"
-                )}
-                onClick={() =>
-                  router.push(
-                    `/anime/watch/${anime?.id}/${currentEpisode?.sourceId}/${currentEpisode.sourceEpisodeId}`
-                  )
-                }
-                tooltip="Expand"
-              >
-                <AiOutlineExpandAlt />
-              </ControlButton>
-            </div>
-            <div className="w-8 h-8">
-              <ControlButton
-                className={classNames(
-                  isInteracting ? "visible opacity-100" : "invisible opacity-0"
-                )}
-                onClick={() => setPlayerState(null)}
-                tooltip="Exit"
-              >
-                <AiOutlineClose />
-              </ControlButton>
-            </div>
-          </div>
-        )}
-      </MobileOverlay>
-
-      {anime?.idMal && (
-        <TimestampSkipButton
-          className="absolute right-4 bottom-24 z-50"
-          episode={parseNumberFromString(currentEpisode.name)}
-          malId={anime.idMal}
-        />
-      )}
-    </React.Fragment>
-  );
-});
-
-PlayerMobileOverlay.displayName = "PlayerMobileOverlay";
-
-const WatchPlayer: React.FC<WatchPlayerProps> = ({ videoRef, ...props }) => {
-  const {
-    playerProps: { episodes, currentEpisodeIndex, setEpisode, sourceId },
-  } = useGlobalPlayer();
-  const sourceEpisodes = useMemo(
-    () => episodes.filter((episode) => episode.sourceId === sourceId),
-    [episodes, sourceId]
-  );
-
-  const nextEpisode = useMemo(
-    () => sourceEpisodes[currentEpisodeIndex + 1],
-    [currentEpisodeIndex, sourceEpisodes]
-  );
-
-  const hotkeys = useMemo(
-    () => [
-      {
-        fn: () => {
-          if (currentEpisodeIndex < sourceEpisodes.length - 1) {
-            setEpisode(nextEpisode);
-          }
-        },
-        hotKey: "shift+n",
-        name: "next-episode",
-      },
-    ],
-    [currentEpisodeIndex, nextEpisode, setEpisode, sourceEpisodes.length]
-  );
-
-  const components = useMemo(
-    () => ({
-      Controls: PlayerControls,
-      MobileControls: PlayerMobileControls,
-      Overlay: PlayerOverlay,
-      MobileOverlay: PlayerMobileOverlay,
-    }),
-    []
-  );
-
-  return (
-    <Player
-      ref={videoRef}
-      components={components}
-      hotkeys={hotkeys}
-      autoPlay
-      {...props}
-    />
-  );
-};
-
-WatchPlayer.displayName = "WatchPlayer";
-
-export default React.memo(WatchPlayer);
+export default Watch
