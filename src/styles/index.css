@@ -1,9 +1,10 @@
-@import './local-fonts.css';
+@import url("https://fonts.googleapis.com/css2?family=Fira+Sans&family=Nunito+Sans&family=Roboto&display=swap");
+
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 
 body {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Fira Sans", Arial, sans-serif;
   @apply w-full min-h-screen overflow-x-hidden text-typography bg-background;
 }
 
@@ -23,8 +24,6 @@ main {
 .banner__overlay {
   background-color: rgba(0, 0, 0, 0.6);
 }
-
-
 
 .reactions img {
   @apply border rounded-full border-background-800 bg-background-800;
@@ -114,6 +113,56 @@ main {
   -webkit-transform: rotate(3deg) translate(0px, -4px);
   -ms-transform: rotate(3deg) translate(0px, -4px);
   transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* Remove these to get rid of the spinner */
+#nprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: 1031;
+  top: 15px;
+  right: 15px;
+}
+
+#nprogress .spinner-icon {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+
+  border: solid 2px transparent;
+  border-top-color: var(--primary-color);
+  border-left-color: var(--primary-color);
+  border-radius: 50%;
+
+  -webkit-animation: nprogress-spinner 400ms linear infinite;
+  animation: nprogress-spinner 400ms linear infinite;
+}
+
+.nprogress-custom-parent {
+  overflow: hidden;
+  position: relative;
+}
+
+.nprogress-custom-parent #nprogress .spinner,
+.nprogress-custom-parent #nprogress .bar {
+  position: absolute;
+}
+
+@-webkit-keyframes nprogress-spinner {
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
+}
+@keyframes nprogress-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .swiper-button {
