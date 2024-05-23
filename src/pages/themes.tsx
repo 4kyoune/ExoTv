@@ -1,4 +1,3 @@
-//@ts-nocheck
 import React, { useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { ThemeSettingsContextProvider } from "@/contexts/ThemeSettingsContext";
@@ -71,9 +70,9 @@ const ThemesPage = ({ slug, type }: ThemesPageProps) => {
     <React.Fragment>
       <Head
         title={
-          !data ? `Themes - Exoexs` : `${data.name} (${data.type}) - Exoexs`
+          !data ? `Themes - Kaguya` : `${data.name} (${data.type}) - Kaguya`
         }
-        description="Random Themes and OPs from Animes."
+        description="Xem OP/ED của các Anime mà bạn yêu thích."
       />
 
       <ThemePlayerContextProvider
