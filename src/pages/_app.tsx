@@ -1,20 +1,24 @@
-//@ts-nocheck
 import BaseLayout from "@/components/layouts/BaseLayout";
+import { SubscriptionContextProvider } from "@/contexts/SubscriptionContext";
+import { GA_TRACKING_ID, pageview } from "@/lib/gtag";
 import "@/styles/index.css";
 import { appWithTranslation } from "next-i18next";
 import nextI18nextConfig from "next-i18next.config";
 import { AppProps } from "next/app";
 import Router from "next/router";
+import Script from "next/script";
 import NProgress from "nprogress";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "react-query";
 import { ReactQueryDevtools } from "react-query/devtools";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
 import { ErrorBoundary } from "react-error-boundary";
 import { AppErrorFallback } from "@/components/shared/AppErrorFallback";
-import { Analytics } from '@vercel/analytics/react';
-
+import { supabaseClient } from "@supabase/auth-helpers-nextjs";
+import { UserProvider } from "@supabase/auth-helpers-react";
+import GlobalPlayerContextProvider from "@/contexts/GlobalPlayerContext";
+import AuthContext, { AuthContextProvider } from "@/contexts/AuthContext";
 
 Router.events.on("routeChangeStart", NProgress.start);
 Router.events.on("routeChangeComplete", NProgress.done);
@@ -35,21 +39,20 @@ interface WorkaroundAppProps extends AppProps {
   err: any;
 }
 
-function App({ Component, pageProps, err }: WorkaroundAppProps) {
-  App.getStaticProps = async (context) => {
-    const pageGetStaticProps = Component.getStaticProps
-      ? await Component.getStaticProps(context)
-      : {};
-  
-    return {
-      props: {
-        ...pageGetStaticProps.props,
-      },
-      revalidate: 10,
-    };
-  };
+function App({ Component, pageProps, router, err }: WorkaroundAppProps) {
   const [errorInfo, setErrorInfo] = useState<React.ErrorInfo>(null);
 
+  useEffect(() => {
+    const handleRouteChange = (url: string) => {
+      pageview(url);
+    };
+
+    router.events.on("routeChangeComplete", handleRouteChange);
+
+    return () => {
+      router.events.off("routeChangeComplete", handleRouteChange);
+    };
+  }, [router.events]);
 
   const getLayout =
     // @ts-ignore
@@ -57,7 +60,25 @@ function App({ Component, pageProps, err }: WorkaroundAppProps) {
 
   return (
     <React.Fragment>
-    <script id="syncData" type="application/json"></script>
+      {/* A placeholder to integrate MAL-Sync (https://github.com/MALSync/MALSync)*/}
+      <script id="syncData" type="application/json"></script>
+
+      <Script
+        strategy="afterInteractive"
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
+      />
+
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_TRACKING_ID}', {
+              page_path: window.location.pathname,
+            });
+        `}
+      </Script>
+
       <ToastContainer
         position="bottom-left"
         autoClose={5000}
@@ -71,8 +92,11 @@ function App({ Component, pageProps, err }: WorkaroundAppProps) {
       />
 
       <QueryClientProvider client={queryClient}>
+        <AuthContextProvider>
+          <SubscriptionContextProvider>
+            <GlobalPlayerContextProvider>
               <ErrorBoundary
-                onError={(info) => {
+                onError={(error, info) => {
                   setErrorInfo(info);
                 }}
                 fallbackRender={(fallbackProps) => {
@@ -85,9 +109,10 @@ function App({ Component, pageProps, err }: WorkaroundAppProps) {
                 }}
               >
                 {getLayout(<Component {...pageProps} err={err} />)}
-                <Analytics />
               </ErrorBoundary>
-            
+            </GlobalPlayerContextProvider>
+          </SubscriptionContextProvider>
+        </AuthContextProvider>
 
         {process.env.NODE_ENV === "development" && <ReactQueryDevtools />}
       </QueryClientProvider>
@@ -95,6 +120,4 @@ function App({ Component, pageProps, err }: WorkaroundAppProps) {
   );
 }
 
-const AppWithISR = appWithTranslation(App, nextI18nextConfig);
-AppWithISR.getStaticProps = App.getStaticProps;
-export default AppWithISR;
+export default appWithTranslation(App, nextI18nextConfig);
