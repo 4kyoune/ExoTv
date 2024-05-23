@@ -1,4 +1,3 @@
-//@ts-nocheck
 import TraceImageSearch from "@/components/features/trace/TraceImageSearch";
 import TracePanel from "@/components/features/trace/TracePanel";
 import Button from "@/components/shared/Button";
@@ -10,7 +9,7 @@ import React, { useCallback, useState } from "react";
 import { CgArrowLongRight } from "react-icons/cg";
 import { MdOutlineRestartAlt } from "react-icons/md";
 import { ImageType } from "react-images-uploading";
-import { useTranslation } from "next-i18next";
+import { useTranslation } from "react-i18next";
 import Section from "@/components/shared/Section";
 
 const TracePage = () => {
@@ -39,8 +38,8 @@ const TracePage = () => {
   return (
     <React.Fragment>
       <Head
-        title={`${t("Scene Search")} - Exoexs`}
-        description="Anime Scene Search by Image :: It tells you which anime, which episode, and the exact moment this scene appears Using search engine made by trace.moe. Note: Search results are not 100% accurate. Only works with anime scenes."
+        title={`${t("tab_title")} - Kaguya`}
+        description="Tìm kiếm Anime, số tập mà khoảnh khắc trong ảnh đó xuất hiện."
       />
 
       <Section className="pt-20 space-y-16 flex flex-col items-center justify-center">
@@ -60,6 +59,28 @@ const TracePage = () => {
           </p>
 
           <p className="italic">{t("note")}</p>
+        </div>
+
+        <div className="w-full hidden md:flex items-center justify-center gap-4">
+          <div className="border border-white/60 relative h-64 w-full">
+            <Image
+              src="https://i.ibb.co/rGRC9vw/www-kaguya-live-trace.png"
+              alt="example image"
+              objectFit="cover"
+              layout="fill"
+            />
+          </div>
+
+          <CgArrowLongRight className="shrink-0 w-10 h-10" />
+
+          <div className="border border-white/60 relative h-64 w-full">
+            <Image
+              src="https://i.ibb.co/cg7TwWR/www-kaguya-live-trace-1.png"
+              alt="example image"
+              objectFit="cover"
+              layout="fill"
+            />
+          </div>
         </div>
 
         {traceResult ? (
